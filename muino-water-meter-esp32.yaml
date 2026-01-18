@@ -149,12 +149,14 @@ switch:
     id: fastupdate
     name: Speed mode
     icon: "mdi:emoticon-cool-outline"
+    entity_category: "config"
 
   - platform: template
     optimistic: true
     id: debugmodus
     name: Debug mode
     icon: "mdi:bug"
+    entity_category: "config"
     turn_on_action:
       - switch.turn_on: fastupdate
     turn_off_action:
@@ -165,6 +167,7 @@ switch:
     id: spindel_normal
     name: "Spindel 180=on 120=off"
     icon: "mdi:rotate-3d-variant"
+    entity_category: "config"
     restore_mode: RESTORE_DEFAULT_ON
 
   # for manual calibration or auto
@@ -172,6 +175,7 @@ switch:
     id: calibration_mode
     name: "Manual Calibration"
     icon: "mdi:tune-vertical"
+    entity_category: "config"
     lambda: |-
       return id(manual_calibration);
     turn_on_action:
@@ -207,6 +211,7 @@ text_sensor:
   - platform: template
     name: "debug_JSON"
     id: debug_json
+    entity_category: "diagnostic"
     # No automatic interval, we'll update manually
     update_interval: never
 
@@ -261,7 +266,6 @@ sensor:
     pin: 
       number: 2
       allow_other_uses: true
-
       ignore_strapping_warning: true
     name: "light_sensor_a_light"
     id: light_sensor_a_light
@@ -837,6 +841,7 @@ number:
     min_value: 0
     max_value: 3300
     step: 1
+    entity_category: "config"
     lambda: return id(manual_offset_a);
     set_action:
       then:
@@ -849,6 +854,7 @@ number:
     min_value: 0
     max_value: 3300
     step: 1
+    entity_category: "config"
     lambda: return id(manual_offset_b);
     set_action:
       then:
@@ -861,6 +867,7 @@ number:
     min_value: 0
     max_value: 3300
     step: 1
+    entity_category: "config"
     lambda: return id(manual_offset_c);
     set_action:
       then:
