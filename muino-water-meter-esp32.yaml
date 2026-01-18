@@ -13,7 +13,7 @@ esphome:
     board_build.flash_mode: "dio"
     
   project:
-    name: "Muino Water Meter"
+    name: "martijnvwezel.muino-water-meter"
     version: "4.1.0-dev"
 
 esp32:
@@ -889,7 +889,7 @@ number:
 # Make sure logging is correct for solving platform IO bugs
 logger:
   hardware_uart: USB_SERIAL_JTAG
-  level: WARNING
+  level: WARN
 
 # API is a requirement of the dashboard import.
 api:
