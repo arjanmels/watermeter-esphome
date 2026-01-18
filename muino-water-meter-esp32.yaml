@@ -500,6 +500,7 @@ sensor:
           switch.is_on: fastupdate
         then:
           - component.update: report_liters
+          - component.update: report_liters_ml
           - component.update: report_liters_rounded
           - component.update: al
           - component.update: bl
