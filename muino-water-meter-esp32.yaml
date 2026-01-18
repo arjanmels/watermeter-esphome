@@ -89,12 +89,10 @@ interval:
                       ESP_LOGD("debug_json", "Publishing debug json: %s", json);
                       id(debug_json).publish_state(json);
 
-
-
           else:
             - lambda: |-
-                // If fastupdate is off, only update every 60 seconds
-                if ((millis() - id(last_water_flow)) >= 60000) {
+                // If fastupdate is off, only update every 60 seconds (configurable)
+                if ((millis() - id(last_water_flow)) >= id(update_interval_idle) * 1000) {
                   if (id(spindel_normal).state) {
                     // Normal meter: symmetric 180° pattern
                     id(last_reported_liters__mili) = (int)(1000*(id(liters)+id(phase)/6.0));
@@ -384,18 +382,33 @@ sensor:
 
 # liters
   - platform: template
-    name: "water_liter_sensor"
+    name: "⚠️ Water Total (mL) [DEPRECATED]"
+    icon: mdi:alert-circle-outline
     id: report_liters
     force_update: false
     device_class: "water"
     unit_of_measurement: "mL"
-    accuracy_decimals: 0 
+    accuracy_decimals: 3
     state_class: total_increasing
     lambda: |-
       if (id(liters) < 2){
         return 0;
       }    
       return id(last_reported_liters__mili);
+
+  - platform: template
+    name: "Muino Water Total (L)"
+    id: report_liters_ml
+    force_update: false
+    device_class: "water"
+    unit_of_measurement: "L"
+    accuracy_decimals: 3
+    state_class: total_increasing
+    lambda: |-
+      if (id(liters) < 2){
+        return 0;
+      }    
+      return id(last_reported_liters__mili)/1000.0;
 
   - platform: template
     name: "liters"
@@ -440,7 +453,6 @@ sensor:
     device_class: "water"
     unit_of_measurement: "L"
     accuracy_decimals: 1
-    state_class: measurement
     lambda: |-
       return id(current_consumption);
 
@@ -451,7 +463,6 @@ sensor:
     device_class: "water"
     unit_of_measurement: "L"
     accuracy_decimals: 1
-    state_class: measurement
     lambda: |-
       return id(previous_consumption);
 
@@ -534,9 +545,17 @@ sensor:
       if (id(liters) < 2) {
           alpha_cor = 0.1; // when 2 liter not found correct harder
           if (id(liters) < 0) {
+              // Reset calibration if negative liters detected  
               id(liters) = 0;
+              id(min_a)= a;
+              id(min_b)= b;
+              id(min_c)= c;
+              id(max_a)= 0;
+              id(max_b)= 0;
+              id(max_c)= 0;
           }
       }
+
       auto mini_average = [](float x, float y, float alpha_cor){
         if ((x + 5) <= y && y > 10) {
             return x;
@@ -783,6 +802,11 @@ globals:
     type: int
     initial_value: "0"
 
+  - id: update_interval_idle
+    type: int
+    restore_value: yes
+    initial_value: "60"
+
 number:
   - platform: template
     id: offset_a_number
@@ -820,12 +844,24 @@ number:
         - lambda: |-
             id(manual_offset_c) = (int) x;
 
+  - platform: template
+    id: update_interval_idle_number
+    name: "Update Interval (s)"
+    min_value: 1
+    max_value: 3600
+    step: 1
+    lambda: return id(update_interval_idle);
+    set_action:
+      then:
+        - lambda: |-
+            id(update_interval_idle) = (int) x;
+
 
 
 # Make sure logging is correct for solving platform IO bugs
 logger:
   hardware_uart: USB_SERIAL_JTAG
-  level: ERROR
+  level: INFO
 
 # API is a requirement of the dashboard import.
 api:
