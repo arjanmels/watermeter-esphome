@@ -15,6 +15,10 @@ esphome:
   project:
     name: "martijnvwezel.muino-water-meter"
     version: "4.1.0-dev"
+    
+  project:
+    name: "martijnvwezel.muino-water-meter"
+    version: "4.1.0-dev"
 
 esp32:
   board: seeed_xiao_esp32c3
@@ -173,6 +177,7 @@ switch:
     id: calibration_mode
     name: "Manual Calibration"
     icon: "mdi:tune-vertical"
+    entity_category: "config"
     entity_category: "config"
     lambda: |-
       return id(manual_calibration);
@@ -406,7 +411,7 @@ sensor:
 
 # liters
   - platform: template
-    name: "water_liter_sensor"
+    name: "Total Consumption"
     id: report_liters
     force_update: false
     device_class: "water"
@@ -853,6 +858,7 @@ number:
     max_value: 3300
     step: 1
     entity_category: "config"
+    entity_category: "config"
     lambda: return id(manual_offset_b);
     set_action:
       then:
@@ -865,6 +871,7 @@ number:
     min_value: 0
     max_value: 3300
     step: 1
+    entity_category: "config"
     entity_category: "config"
     lambda: return id(manual_offset_c);
     set_action:
