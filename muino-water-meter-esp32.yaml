@@ -56,30 +56,41 @@ interval:
                 condition:
                   lambda: |-
                     return id(debugmodus).state;
-                then:            
-                  - text_sensor.template.publish:
-                      id: debug_json
-                      state: !lambda |-
-                        return "{\"liters\":" + to_string(id(liters)) +
-                              ",\"phase\":" + to_string(id(phase)) +
-                              ",\"last_reported_liters\":" + to_string(id(last_reported_liters)) +
-                              ",\"last_reported_liters__mili\":" + to_string(id(last_reported_liters__mili)) +
-                              ",\"aa\":" + to_string(id(aa)) +
-                              ",\"bb\":" + to_string(id(bb)) +
-                              ",\"cc\":" + to_string(id(cc)) +
-                              ",\"max_a\":" + to_string(id(max_a)) +
-                              ",\"max_b\":" + to_string(id(max_b)) +
-                              ",\"max_c\":" + to_string(id(max_c)) +
-                              ",\"min_a\":" + to_string(id(min_a)) +
-                              ",\"min_b\":" + to_string(id(min_b)) +
-                              ",\"min_c\":" + to_string(id(min_c)) +
-                              ",\"upper_bound\":" + to_string(id(upper_bound)) +
-                              ",\"lower_bound\":" + to_string(id(lower_bound)) +
-                              ",\"flow_rate_current\":" + to_string(id(flow_rate_current)) +
-                              ",\"flow_rate_last\":" + to_string(id(flow_rate_last)) +
-                              ",\"current_consumption\":" + to_string(id(current_consumption)) +
-                              ",\"previous_consumption\":" + to_string(id(previous_consumption)) +
-                              "}";
+                then:
+                  - lambda: |-
+                      char json[256];
+                      int flow_cur = (int)(id(flow_rate_current) * 1);
+                      int flow_last = (int)(id(flow_rate_last) * 1);
+                      int cons_cur = (int)(id(current_consumption) * 1);
+                      int cons_last = (int)(id(previous_consumption) * 1);
+                      snprintf(
+                        json, sizeof(json),
+                        "{"
+                          "\"liters\":%d,\"phase\":%d,"
+                          "\"last_L\":%d,\"last_mL\":%d,"
+                          "\"aa\":%d,\"bb\":%d,\"cc\":%d,"
+                          "\"max_a\":%d,\"max_b\":%d,\"max_c\":%d,"
+                          "\"min_a\":%d,\"min_b\":%d,\"min_c\":%d,"
+                          "\"flow_cur\":%d,\"flow_last\":%d,"
+                          "\"cons_cur\":%d,\"cons_last\":%d"
+                        "}"
+                        ,id(liters), id(phase)
+                        ,id(last_reported_liters)
+                        ,id(last_reported_liters__mili)
+
+                        ,id(aa), id(bb), id(cc)
+                        ,id(max_a), id(max_b), id(max_c)
+                        ,id(min_a), id(min_b), id(min_c)
+
+                        ,flow_cur, flow_last
+                        ,cons_cur, cons_last
+                      );
+
+                      ESP_LOGD("debug_json", "Publishing debug json: %s", json);
+                      id(debug_json).publish_state(json);
+
+
+
           else:
             - lambda: |-
                 // If fastupdate is off, only update every 60 seconds
@@ -566,7 +577,7 @@ sensor:
         c -= (id(min_c) + id(max_c)) >> 1;
       }
       // log with manual calibration the offset and without first string manual_ofset* tehn the auto calibration one 
-      ESP_LOGI("calibration", "a_offset:%d b_offset:%d c_offset:%d | a_auto:%d b_auto:%d c_auto:%d",
+      ESP_LOGD("calibration", "a_offset:%d b_offset:%d c_offset:%d | a_auto:%d b_auto:%d c_auto:%d",
                 id(manual_offset_a), id(manual_offset_b), id(manual_offset_c),
                 (id(min_a) + id(max_a)) >> 1,
                 (id(min_b) + id(max_b)) >> 1,
