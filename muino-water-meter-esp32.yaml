@@ -11,12 +11,10 @@ esphome:
   name_add_mac_suffix: true
   platformio_options:
     board_build.flash_mode: "dio"
-
-  # This will allow for (future) project identification,
-  # configuration and updates.
-  # project:
-  #   name: esphome-muino-water-meter
-  #   version: "3.0.4"
+    
+  project:
+    name: "Muino Water Meter"
+    version: "4.1.0-dev"
 
 esp32:
   board: seeed_xiao_esp32c3
@@ -377,7 +375,7 @@ sensor:
 
 # liters
   - platform: template
-    name: "water_liter_sensor"
+    name: "Total Consumption"
     id: report_liters
     force_update: false
     device_class: "water"
@@ -391,7 +389,7 @@ sensor:
       return id(last_reported_liters__mili)/1000.0;
 
   - platform: template
-    name: "liters"
+    name: "Total Consumption (Rounded)"
     id: report_liters_rounded
     force_update: false
     device_class: "water"
