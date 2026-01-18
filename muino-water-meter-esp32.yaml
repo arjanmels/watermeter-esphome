@@ -56,34 +56,43 @@ interval:
                 condition:
                   lambda: |-
                     return id(debugmodus).state;
-                then:            
-                  - text_sensor.template.publish:
-                      id: debug_json
-                      state: !lambda |-
-                        return "{\"liters\":" + to_string(id(liters)) +
-                              ",\"phase\":" + to_string(id(phase)) +
-                              ",\"last_reported_liters\":" + to_string(id(last_reported_liters)) +
-                              ",\"last_reported_liters__mili\":" + to_string(id(last_reported_liters__mili)) +
-                              ",\"aa\":" + to_string(id(aa)) +
-                              ",\"bb\":" + to_string(id(bb)) +
-                              ",\"cc\":" + to_string(id(cc)) +
-                              ",\"max_a\":" + to_string(id(max_a)) +
-                              ",\"max_b\":" + to_string(id(max_b)) +
-                              ",\"max_c\":" + to_string(id(max_c)) +
-                              ",\"min_a\":" + to_string(id(min_a)) +
-                              ",\"min_b\":" + to_string(id(min_b)) +
-                              ",\"min_c\":" + to_string(id(min_c)) +
-                              ",\"upper_bound\":" + to_string(id(upper_bound)) +
-                              ",\"lower_bound\":" + to_string(id(lower_bound)) +
-                              ",\"flow_rate_current\":" + to_string(id(flow_rate_current)) +
-                              ",\"flow_rate_last\":" + to_string(id(flow_rate_last)) +
-                              ",\"current_consumption\":" + to_string(id(current_consumption)) +
-                              ",\"previous_consumption\":" + to_string(id(previous_consumption)) +
-                              "}";
+                then:
+                  - lambda: |-
+                      char json[256];
+                      int flow_cur = (int)(id(flow_rate_current) * 1);
+                      int flow_last = (int)(id(flow_rate_last) * 1);
+                      int cons_cur = (int)(id(current_consumption) * 1);
+                      int cons_last = (int)(id(previous_consumption) * 1);
+                      snprintf(
+                        json, sizeof(json),
+                        "{"
+                          "\"liters\":%d,\"phase\":%d,"
+                          "\"last_L\":%d,\"last_mL\":%d,"
+                          "\"aa\":%d,\"bb\":%d,\"cc\":%d,"
+                          "\"max_a\":%d,\"max_b\":%d,\"max_c\":%d,"
+                          "\"min_a\":%d,\"min_b\":%d,\"min_c\":%d,"
+                          "\"flow_cur\":%d,\"flow_last\":%d,"
+                          "\"cons_cur\":%d,\"cons_last\":%d"
+                        "}"
+                        ,id(liters), id(phase)
+                        ,id(last_reported_liters)
+                        ,id(last_reported_liters__mili)
+
+                        ,id(aa), id(bb), id(cc)
+                        ,id(max_a), id(max_b), id(max_c)
+                        ,id(min_a), id(min_b), id(min_c)
+
+                        ,flow_cur, flow_last
+                        ,cons_cur, cons_last
+                      );
+
+                      ESP_LOGD("debug_json", "Publishing debug json: %s", json);
+                      id(debug_json).publish_state(json);
+
           else:
             - lambda: |-
-                // If fastupdate is off, only update every 60 seconds
-                if ((millis() - id(last_water_flow)) >= 60000) {
+                // If fastupdate is off, only update every 60 seconds (configurable)
+                if ((millis() - id(last_water_flow)) >= id(update_interval_idle) * 1000) {
                   if (id(spindel_normal).state) {
                     // Normal meter: symmetric 180° pattern
                     id(last_reported_liters__mili) = (int)(1000*(id(liters)+id(phase)/6.0));
@@ -171,6 +180,28 @@ switch:
     turn_off_action:
       - lambda: |-
           id(manual_calibration) = false;
+
+button:
+  - platform: template
+    name: "Reset Calibration"
+    icon: "mdi:restart"
+    on_press:
+      - lambda: |-
+          int min = id(lower_bound);
+          int a = id(light_sensor_a_light).state - id(light_sensor_a_dark).state;
+          if (a < min) a = id(light_sensor_a_light).state;
+          int b = id(light_sensor_b_light).state - id(light_sensor_b_dark).state;
+          if (b < min) b = id(light_sensor_b_light).state;
+          int c = id(light_sensor_c_light).state - id(light_sensor_c_dark).state;
+          if (c < min) c = id(light_sensor_c_light).state;
+
+          id(liters) = 0;
+          id(min_a)= a;
+          id(min_b)= b;
+          id(min_c)= c;
+          id(max_a)= 0;
+          id(max_b)= 0;
+          id(max_c)= 0;
 
 text_sensor:
   - platform: template
@@ -373,18 +404,33 @@ sensor:
 
 # liters
   - platform: template
-    name: "water_liter_sensor"
+    name: "⚠️ Water Total (mL) [DEPRECATED]"
+    icon: mdi:alert-circle-outline
     id: report_liters
     force_update: false
     device_class: "water"
     unit_of_measurement: "mL"
-    accuracy_decimals: 0 
+    accuracy_decimals: 3
     state_class: total_increasing
     lambda: |-
       if (id(liters) < 2){
         return 0;
       }    
       return id(last_reported_liters__mili);
+
+  - platform: template
+    name: "Muino Water Total (L)"
+    id: report_liters_ml
+    force_update: false
+    device_class: "water"
+    unit_of_measurement: "L"
+    accuracy_decimals: 3
+    state_class: total_increasing
+    lambda: |-
+      if (id(liters) < 2){
+        return 0;
+      }    
+      return id(last_reported_liters__mili)/1000.0;
 
   - platform: template
     name: "liters"
@@ -429,7 +475,6 @@ sensor:
     device_class: "water"
     unit_of_measurement: "L"
     accuracy_decimals: 1
-    state_class: measurement
     lambda: |-
       return id(current_consumption);
 
@@ -440,7 +485,6 @@ sensor:
     device_class: "water"
     unit_of_measurement: "L"
     accuracy_decimals: 1
-    state_class: measurement
     lambda: |-
       return id(previous_consumption);
 
@@ -456,6 +500,7 @@ sensor:
           switch.is_on: fastupdate
         then:
           - component.update: report_liters
+          - component.update: report_liters_ml
           - component.update: report_liters_rounded
           - component.update: al
           - component.update: bl
@@ -500,7 +545,7 @@ sensor:
       int min = id(lower_bound);
 
       if (a < min || b < min || c < min ){
-        ESP_LOGW("light_level", "Too dark, ignoring this measurement");
+        ESP_LOGW("light_level", "Signal too weak. Possible causes: too bright environment, LED failure, or sensor misalignment. Ignoring measurement.");
         return 0;
       }
       if (a > max || b > max || c > max){
@@ -523,9 +568,17 @@ sensor:
       if (id(liters) < 2) {
           alpha_cor = 0.1; // when 2 liter not found correct harder
           if (id(liters) < 0) {
+              // Reset calibration if negative liters detected  
               id(liters) = 0;
+              id(min_a)= a;
+              id(min_b)= b;
+              id(min_c)= c;
+              id(max_a)= 0;
+              id(max_b)= 0;
+              id(max_c)= 0;
           }
       }
+
       auto mini_average = [](float x, float y, float alpha_cor){
         if ((x + 5) <= y && y > 10) {
             return x;
@@ -566,7 +619,7 @@ sensor:
         c -= (id(min_c) + id(max_c)) >> 1;
       }
       // log with manual calibration the offset and without first string manual_ofset* tehn the auto calibration one 
-      ESP_LOGI("calibration", "a_offset:%d b_offset:%d c_offset:%d | a_auto:%d b_auto:%d c_auto:%d",
+      ESP_LOGD("calibration", "a_offset:%d b_offset:%d c_offset:%d | a_auto:%d b_auto:%d c_auto:%d",
                 id(manual_offset_a), id(manual_offset_b), id(manual_offset_c),
                 (id(min_a) + id(max_a)) >> 1,
                 (id(min_b) + id(max_b)) >> 1,
@@ -772,6 +825,11 @@ globals:
     type: int
     initial_value: "0"
 
+  - id: update_interval_idle
+    type: int
+    restore_value: yes
+    initial_value: "60"
+
 number:
   - platform: template
     id: offset_a_number
@@ -809,12 +867,24 @@ number:
         - lambda: |-
             id(manual_offset_c) = (int) x;
 
+  - platform: template
+    id: update_interval_idle_number
+    name: "Update Interval (s)"
+    min_value: 1
+    max_value: 3600
+    step: 1
+    lambda: return id(update_interval_idle);
+    set_action:
+      then:
+        - lambda: |-
+            id(update_interval_idle) = (int) x;
+
 
 
 # Make sure logging is correct for solving platform IO bugs
 logger:
   hardware_uart: USB_SERIAL_JTAG
-  level: ERROR
+  level: INFO
 
 # API is a requirement of the dashboard import.
 api:
