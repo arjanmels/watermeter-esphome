@@ -413,14 +413,19 @@ sensor:
     id: report_liters
     force_update: false
     device_class: "water"
+<<<<<<< HEAD
     unit_of_measurement: "mL"
     accuracy_decimals: 3
+=======
+    unit_of_measurement: "L"
+    accuracy_decimals: 0 
+>>>>>>> 5fdd328 (Changed to fractional liters)
     state_class: total_increasing
     lambda: |-
       if (id(liters) < 2){
         return 0;
       }    
-      return id(last_reported_liters__mili);
+      return id(last_reported_liters__mili)/1000.0;
 
   - platform: template
     name: "Muino Water Total (L)"
@@ -444,6 +449,7 @@ sensor:
     unit_of_measurement: "L"
     accuracy_decimals: 0 
     state_class: total_increasing
+    disabled_by_default: true 
     lambda: |-
       if (id(last_reported_liters) < 2){
         return 0;
@@ -891,7 +897,11 @@ number:
 # Make sure logging is correct for solving platform IO bugs
 logger:
   hardware_uart: USB_SERIAL_JTAG
+<<<<<<< HEAD
   level: INFO
+=======
+  level: WARNING
+>>>>>>> 5fdd328 (Changed to fractional liters)
 
 # API is a requirement of the dashboard import.
 api:
